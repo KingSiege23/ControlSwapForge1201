@@ -4,23 +4,102 @@ plugins {
     id 'maven-publish'
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
-group = 'com.controlswapforge'
-version = '1.0.0-1.20.1'
+
+version = '1.0.1'
+group = 'com.controlswap'
+
+base {
+    archivesName = 'controlswap-forge-1.20.1'
+}
+
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
 minecraft {
     mappings channel: 'official', version: '1.20.1'
+
     copyIdeResources = true
+
     runs {
         configureEach {
             workingDirectory project.file('run')
+
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
-            mods { controlswapforge { source sourceSets.main } }
+
+            mods {
+                controlswap {
+                    source sourceSets.main
+                }
+            }
         }
-        client {}
-        server {}
+
+        client {
+            property 'forge.enabledGameTestNamespaces', 'controlswap'
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', 'controlswap'
+            args '--nogui'
+        }
+
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', 'controlswap'
+        }
+
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', 'controlswap', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
     }
 }
-repositories { maven { url = 'https://maven.minecraftforge.net' } }
-dependencies { minecraft 'net.minecraftforge:forge:1.20.1-47.4.0' }
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+repositories {
+    // No additional repositories needed.
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: '1.20.1',
+            minecraft_version_range: '[1.20.1,1.21)',
+            forge_version: '47.3.0',
+            forge_version_range: '[47.3,)',
+            loader_version_range: '[47,)',
+            mod_id: 'controlswap',
+            mod_name: 'Control Swap',
+            mod_license: 'MIT',
+            mod_version: project.version,
+            mod_authors: 'ControlSwap',
+            mod_description: 'Timed shared-body player control rotation for Minecraft Forge 1.20.1.'
+    ]
+
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+                'Specification-Title'     : 'Control Swap',
+                'Specification-Vendor'    : 'ControlSwap',
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.version,
+                'Implementation-Vendor'   : 'ControlSwap'
+        ])
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+}
